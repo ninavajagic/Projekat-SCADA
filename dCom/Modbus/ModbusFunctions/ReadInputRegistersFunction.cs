@@ -24,22 +24,42 @@ namespace Modbus.ModbusFunctions
         /// <inheritdoc />
         public override byte[] PackRequest()
         {
-            Console.WriteLine("Request started");
-            // ModbusReadCommandParameters nam treba
-            byte[] recVal = new byte[12];
-            //Head message
-
-            // Data message
-
-            return recVal;
-            Console.WriteLine("Request ended");
+            //TO DO: IMPLEMENT
+            byte[] ret = new byte[12];
+            ret[1] = (byte)(CommandParameters.TransactionId);
+            ret[0] = (byte)(CommandParameters.TransactionId >> 8);
+            ret[3] = (byte)(CommandParameters.ProtocolId);
+            ret[2] = (byte)(CommandParameters.ProtocolId >> 8);
+            ret[5] = (byte)(CommandParameters.Length);
+            ret[4] = (byte)(CommandParameters.Length >> 8);
+            ret[6] = CommandParameters.UnitId;
+            ret[7] = CommandParameters.FunctionCode;
+            ret[9] = (byte)(((ModbusReadCommandParameters)CommandParameters).StartAddress);
+            ret[8] = (byte)(((ModbusReadCommandParameters)CommandParameters).StartAddress >> 8);
+            ret[11] = (byte)(((ModbusReadCommandParameters)CommandParameters).Quantity);
+            ret[10] = (byte)(((ModbusReadCommandParameters)CommandParameters).Quantity >> 8);
+            return ret;
         }
 
         /// <inheritdoc />
         public override Dictionary<Tuple<PointType, ushort>, ushort> ParseResponse(byte[] response)
         {
             //TO DO: IMPLEMENT
-            throw new NotImplementedException();
+            Dictionary<Tuple<PointType, ushort>, ushort> ret = new Dictionary<Tuple<PointType, ushort>, ushort>();
+            ModbusReadCommandParameters modbusRead = this.CommandParameters as ModbusReadCommandParameters;
+
+            ushort address = ((ModbusReadCommandParameters)CommandParameters).StartAddress;
+            ushort byte_count = response[8];
+            ushort valuee;
+
+            for (int i = 0; i < byte_count; i += 2)
+            {
+                valuee = BitConverter.ToUInt16(response, 9 + i);
+                valuee = (ushort)IPAddress.NetworkToHostOrder((short)valuee);
+                ret.Add(new Tuple<PointType, ushort>(PointType.ANALOG_INPUT, address), valuee);
+                address++;
+            }
+            return ret;
         }
     }
 }
